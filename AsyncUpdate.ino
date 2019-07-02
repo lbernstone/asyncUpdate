@@ -3,8 +3,8 @@
 #include <ESPmDNS.h>
 #include <Update.h>
 
-#define MYSSID "larryb"
-#define PASSWD "clownfish"
+#define MYSSID "ssid"
+#define PASSWD "passwd"
 
 AsyncWebServer server(80);
 
@@ -33,7 +33,7 @@ void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size
   if (!index){
     log_i("Update");
     // if filename includes spiffs, update the spiffs partition
-    int cmd = (filename.indexOf("spiffs") > 0) ? U_SPIFFS : U_FLASH;
+    int cmd = (filename.indexOf("spiffs") > -1) ? U_SPIFFS : U_FLASH;
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, cmd)) {
       Update.printError(Serial);
     }
