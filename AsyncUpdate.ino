@@ -4,9 +4,10 @@
 #include <Update.h>
 
 #define MYSSID "ssid"
-#define PASSWD "passwd"
+#define PASSWD "password"
 
 AsyncWebServer server(80);
+size_t content_len;
 
 boolean wifiConnect(char* host) {
 #ifdef MYSSID
@@ -32,6 +33,7 @@ void handleUpdate(AsyncWebServerRequest *request) {
 void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   if (!index){
     log_i("Update");
+    content_len = request->contentLength();
     // if filename includes spiffs, update the spiffs partition
     int cmd = (filename.indexOf("spiffs") > -1) ? U_SPIFFS : U_FLASH;
     if (!Update.begin(UPDATE_SIZE_UNKNOWN, cmd)) {
@@ -58,6 +60,10 @@ void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size
   }
 }
 
+void printProgress(size_t prg, size_t sz) {
+  log_i("Progress: %d%%\n", (prg*100)/content_len);
+}
+
 boolean webInit() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {request->redirect("/update");});
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest *request){handleUpdate(request);});
@@ -68,6 +74,7 @@ boolean webInit() {
   );
   server.onNotFound([](AsyncWebServerRequest *request){request->send(404);});
   server.begin();
+  Update.onProgress(printProgress);
 }
 
 void setup() {
