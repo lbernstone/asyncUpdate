@@ -1,10 +1,14 @@
-#include <WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <ESPmDNS.h>
+#ifdef ESP8266
+#include <Updater.h>
+#include <ESP8266mDNS.h>
+#else
 #include <Update.h>
+#include <ESPmDNS.h>
+#endif
 
 #define MYSSID "ssid"
-#define PASSWD "password"
+#define PASSWD "passwd"
 
 AsyncWebServer server(80);
 size_t content_len;
@@ -14,7 +18,7 @@ boolean wifiConnect(char* host) {
   WiFi.begin(MYSSID,PASSWD);
   WiFi.waitForConnectResult();
 #else
-  WiFi.begin();  
+  WiFi.begin();
   WiFi.waitForConnectResult();
 #endif
   Serial.println(WiFi.localIP());
@@ -32,17 +36,26 @@ void handleUpdate(AsyncWebServerRequest *request) {
 
 void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final) {
   if (!index){
-    log_i("Update");
+    Serial.println("Update");
     content_len = request->contentLength();
     // if filename includes spiffs, update the spiffs partition
     int cmd = (filename.indexOf("spiffs") > -1) ? U_SPIFFS : U_FLASH;
-    if (!Update.begin(UPDATE_SIZE_UNKNOWN, cmd)) {
+#ifdef ESP8266
+    Update.runAsync(true);
+    if (!Update.begin(content_len, cmd)) {
+#else
+    if (!Update.begin(UPDATE_LENGTH_UNKNOWN, cmd)) {
+#endif
       Update.printError(Serial);
     }
   }
 
   if (Update.write(data, len) != len) {
     Update.printError(Serial);
+#ifdef ESP8266
+  } else {
+    Serial.printf("Progress: %d%%\n", (Update.progress()*100)/Update.size());
+#endif
   }
 
   if (final) {
@@ -61,7 +74,7 @@ void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size
 }
 
 void printProgress(size_t prg, size_t sz) {
-  log_i("Progress: %d%%\n", (prg*100)/content_len);
+  Serial.printf("Progress: %d%%\n", (prg*100)/content_len);
 }
 
 boolean webInit() {
@@ -74,13 +87,19 @@ boolean webInit() {
   );
   server.onNotFound([](AsyncWebServerRequest *request){request->send(404);});
   server.begin();
+#ifdef ESP32
   Update.onProgress(printProgress);
+#endif
 }
 
 void setup() {
   Serial.begin(115200);
   char host[16];
+#ifdef ESP8266
+  snprintf(host, 12, "ESP%08X", ESP.getChipId());
+#else
   snprintf(host, 16, "ESP%012llX", ESP.getEfuseMac());
+#endif
   if(!wifiConnect(host)) {
     Serial.println("Connection failed");
     return;
@@ -90,4 +109,4 @@ void setup() {
   Serial.printf("Ready! Open http://%s.local in your browser\n", host);
 }
 
-void loop() {vTaskDelete(NULL);}
+void loop() {delay(0xFFFFFFFF);}
