@@ -44,7 +44,7 @@ void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size
     Update.runAsync(true);
     if (!Update.begin(content_len, cmd)) {
 #else
-    if (!Update.begin(UPDATE_LENGTH_UNKNOWN, cmd)) {
+    if (!Update.begin(UPDATE_SIZE_UNKNOWN, cmd)) {
 #endif
       Update.printError(Serial);
     }
