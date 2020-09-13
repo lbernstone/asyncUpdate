@@ -2,9 +2,11 @@
 #ifdef ESP8266
 #include <Updater.h>
 #include <ESP8266mDNS.h>
+#define U_PART U_FS
 #else
 #include <Update.h>
 #include <ESPmDNS.h>
+#define U_PART U_SPIFFS
 #endif
 
 #define MYSSID "ssid"
@@ -39,7 +41,7 @@ void handleDoUpdate(AsyncWebServerRequest *request, const String& filename, size
     Serial.println("Update");
     content_len = request->contentLength();
     // if filename includes spiffs, update the spiffs partition
-    int cmd = (filename.indexOf("spiffs") > -1) ? U_SPIFFS : U_FLASH;
+    int cmd = (filename.indexOf("spiffs") > -1) ? U_PART : U_FLASH;
 #ifdef ESP8266
     Update.runAsync(true);
     if (!Update.begin(content_len, cmd)) {
@@ -105,7 +107,8 @@ void setup() {
     return;
   }
   MDNS.begin(host);
-  if(webInit()) MDNS.addService("http", "tcp", 80);
+  webInit();
+  MDNS.addService("http", "tcp", 80);
   Serial.printf("Ready! Open http://%s.local in your browser\n", host);
 }
 
